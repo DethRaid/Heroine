@@ -8,8 +8,11 @@
 
 //pin 0 = data in
 //pin 1 = data out
-//pin 5 = motor 1
+//pin 2 = momentary elevator switches
 //pin 3 = motor 2
+//pin 4 = power elevator switches
+//pin 5 = motor 1
+//pin 6 = elevator motor
 
 //designed for controlling a Sabertooth 2x12, could be adapted for other hardware
 
@@ -17,8 +20,13 @@
 #define BACKWARD 1
 #define STOP     126
 
+#define MOMENTARY_SWITCHES       2
+#define ELEVATOR_POWER_SWITCHES  4
+#define ELEVATOR_MOTOR           6
+
 void getSerialInput();
 void getButtonInput();
+void evaluateElevatorSwitches();
 void motorsForward();
 void motorsBackward();
 void motorsRight();
@@ -27,19 +35,49 @@ void motorsStop();
 void sendSerialData( char data );
 
 char serialData;
+/*!\brief Holds the current and previous state of the inputs from the elevator switches
 
-/*!\brief Initializes the serial communication to a frequency of 9600 Hz and brakes both motors*/
+bit 0 is the current state of the input from the momentary switches
+bit 1 is the last state of the input from the momentary switches
+bit 2 is high if the momentary switches have just gone high, low otherwise
+bit 3 is the current state of the input from the motor start switches
+bit 4 is the last state of the input from the motor start switches
+bit 5 is high if the motor start switches have just gone high, low otherwise*/
+char elevarotInputs;
+
+/*!\brief Initializes the Arduino state.
+
+ Initializes serial communication to a frequency of 9600 Hz and brakes both motors
+ Sets pins 2, and 4 to be input pins while 3, 5, and 6 are set to be output pins
+ Stops all motors
+ Sets the input from the elevator switches to 0
+ */
 void setup() {
   Serial.begin( 9600 );
   pinMode( 5, OUTPUT );
   pinMode( 3, OUTPUT );
+  pinMode( MOMENTARY_SWITCHES, INPUT );
+  pinMode( ELEVATOR_POWER_SWITCHES, INPUT );
+  pinMode( ELEVATOR_MOTOR, OUTPUT );
   motorsStop();
+  digitaalWrite( ELEVATOR_MOTOR, LOW );
+  elevatorInputs = 0;
 }
 
-/*!\brief Looks at the current serial input and determines a motor configuration*/
+/*!\brief Looks at the current serial input and determines a motor configuration, then clears serial input buffer
+
+ Possible serial values and corresponding motor configuration:
+   serial data      right motor    left motor    Heroine movement
+     f                forward        forward      forward
+     b                backward       backward     backward
+     r                backward       forward      pivot right
+     l                forward        backward     pivot left
+     s                stop           stop         stop
+ */
 void loop() {
   getSerialInput();
   getButtonInput();
+  evaluateElevatorSwitches();
   
   switch( serialData ) {
     case 'f':
@@ -66,21 +104,48 @@ void loop() {
   serialData = 0;
 }
 
+/*!\brief Checks if serial data is available. If so, the data is written to the variable 'serialData'*/
 void getSerialInput() {
-
   if( Serial.available() > 0 ) {
     // read the incoming byte:
     serialData = Serial.read();
-
-    // say what you got:
-    Serial.print( "I received: " );
-    Serial.println( serialData, DEC );
   }
 }
 
+/*!\brief Currently allows for a killswitch, will be updated to grab input from any sensor*/
 void getButtonInput() {
   if( digitalRead( 13 ) == HIGH ) {
     motorsStop();
+  }
+}
+
+/*!\brief Performs necessary calculations to move the drink elevator. See full description
+
+ First, all the data in elevatorData is shifted one bit higher. This preserves the state of the inputs from last frame
+ Next, the pin assigned to MOMENTARY_SWITCHES is checked. If it is high, bit 0 of elevatorData is set high. Else, bit 0 is set low
+ Then, the pin assigned to ELEVATOR_POWER_SWITCHES is checked. If it is high, bit 3 of elevatorData is set high. Else, bit 3 is set low
+ Once that is done, the Arduino checks if either input has gone high in the last frame
+   This is done for the momentary switches by checking if bit 4 is low and bit 3 is high
+   If so, the pin assigned to ELEVATOR_MOTOR is set to low so that the motor may move.
+ A similiar thing is done for bits 0 and 1, save that ELEVATOR_MOTOR is set to high
+ */
+ void evaluateElevatorButtons() {
+  elevatorInputs = elevatorInputs << 1;  
+  if( digitalRead( MOMENTARY_SWITCHES ) == HIGH ) {
+    elevatorInputs |= 1;
+  } else {
+    elevatorInputs &= ~1;
+  }
+  if( digitalRead( ELEVATOR_POWER_SWITCHES ) == HIGH ) {
+    elevatorInputs |= (1 << 3);
+  } else {
+    elevatorInputs = elevatorInputs & ~(1 << 3);
+  }
+  if( (elevatorInputs & 2) == 0 && (elevatorInput & 1) == 1 ) {  //if bit 1 is high and bit 0 is low
+    digitalWrite( ELEVATOR_MOTOR, HIGH );
+  }
+  if( (elevatorInputs & 16) == 0 && (elevatorInput & 8) == 8 ) {  //if bit 4 is high and bit 3 is low
+    digitalWrite( ELEVATOR_MOTOR, LOW );
   }
 }
 
