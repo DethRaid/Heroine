@@ -1,4 +1,4 @@
-/*!\file   main.ino
+z2/*!\file   main.ino
            The main file for the code which will run on the Arduino
            This code includes functions for controlling the motors, reading data from the sensors, and communicating with the Beablebone Black
    \author David Dubois
@@ -21,7 +21,9 @@
 #define STOP     126
 
 #define MOMENTARY_SWITCHES       2
+#define LEFT_MOTOR               5
 #define ELEVATOR_POWER_SWITCHES  4
+#define RIGHT_MOTOR              3
 #define ELEVATOR_MOTOR           6
 
 void getSerialInput();
@@ -151,32 +153,32 @@ void getButtonInput() {
 
 /*!\brief Sets both motors to full speed forward*/
 void motorsForward() {
-  analogWrite( 5, FORWARD );
-  analogWrite( 3, FORWARD );
+  analogWrite( LEFT_MOTOR, FORWARD );
+  analogWrite( RIGHT_MOTOR, FORWARD );
 }
 
 /*!\brief Sets both motors to full speed backward*/
 void motorsBackward() {
-  analogWrite( 5, BACKWARD );
-  analogWrite( 3, BACKWARD );
+  analogWrite( LEFT_MOTOR, BACKWARD );
+  analogWrite( RIGHT_MOTOR, BACKWARD );
 }
 
 /*!\brief Sets the right motor to full speed backward and the left motor to full speed forward so that Heroine pivots to the right*/
 void motorsRight() {
-  analogWrite( 5, FORWARD );
-  analogWrite( 3, BACKWARD );
+  analogWrite( LEFT_MOTOR, FORWARD );
+  analogWrite( RIGHT_MOTOR, BACKWARD );
 }
 
 /*!\brief Sets the right morot to full speed forward and the left motor to full speed backward so that Heroine pivots to the left*/
 void motorsLeft() {
-  analogWrite( 5, BACKWARD );
-  analogWrite( 3, FORWARD );
+  analogWrite( LEFT_MOTOR, BACKWARD );
+  analogWrite( RIGHT_MOTOR, FORWARD );
 }
 
 /*!\brief Sets both motors to no movement*/
 void motorsStop() {
-  analogWrite( 5, STOP );
-  analogWrite( 3, STOP );
+  analogWrite( LEFT_MOTOR, STOP );
+  analogWrite( RIGHT_MOTOR, STOP );
 }
 
 /*!\brief Sends a single byte of data through the serial interface
