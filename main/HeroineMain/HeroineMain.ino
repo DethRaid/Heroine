@@ -1,4 +1,4 @@
-z2/*!\file   main.ino
+/*!\file   main.ino
            The main file for the code which will run on the Arduino
            This code includes functions for controlling the motors, reading data from the sensors, and communicating with the Beablebone Black
    \author David Dubois
@@ -20,10 +20,11 @@ z2/*!\file   main.ino
 #define BACKWARD 1
 #define STOP     126
 
-#define MOMENTARY_SWITCHES       2
-#define LEFT_MOTOR               5
-#define ELEVATOR_POWER_SWITCHES  4
 #define RIGHT_MOTOR              3
+#define LEFT_MOTOR               5
+
+#define MOMENTARY_SWITCHES       2
+#define ELEVATOR_POWER_SWITCHES  4
 #define ELEVATOR_MOTOR           6
 
 void getSerialInput();
@@ -37,6 +38,7 @@ void motorsStop();
 void sendSerialData( char data );
 
 char serialData;
+
 /*!\brief Holds the current and previous state of the inputs from the elevator switches
 
 bit 0 is the current state of the input from the momentary switches
@@ -45,7 +47,7 @@ bit 2 is high if the momentary switches have just gone high, low otherwise
 bit 3 is the current state of the input from the motor start switches
 bit 4 is the last state of the input from the motor start switches
 bit 5 is high if the motor start switches have just gone high, low otherwise*/
-char elevarotInputs;
+char elevatorInputs;
 
 /*!\brief Initializes the Arduino state.
 
@@ -62,7 +64,7 @@ void setup() {
   pinMode( ELEVATOR_POWER_SWITCHES, INPUT );
   pinMode( ELEVATOR_MOTOR, OUTPUT );
   motorsStop();
-  digitaalWrite( ELEVATOR_MOTOR, LOW );
+  digitalWrite( ELEVATOR_MOTOR, LOW );
   elevatorInputs = 0;
 }
 
@@ -131,23 +133,29 @@ void getButtonInput() {
    If so, the pin assigned to ELEVATOR_MOTOR is set to low so that the motor may move.
  A similiar thing is done for bits 0 and 1, save that ELEVATOR_MOTOR is set to high
  */
- void evaluateElevatorButtons() {
+ void evaluateElevatorSwitches() {
+   Serial.print( "State of switch inputs: " );
+   Serial.println( elevatorInputs );
   elevatorInputs = elevatorInputs << 1;  
   if( digitalRead( MOMENTARY_SWITCHES ) == HIGH ) {
     elevatorInputs |= 1;
+    Serial.println( "Momentary switches registered true" );
   } else {
     elevatorInputs &= ~1;
   }
   if( digitalRead( ELEVATOR_POWER_SWITCHES ) == HIGH ) {
     elevatorInputs |= (1 << 3);
+    //Serial.println( "Power switches registered true" );
   } else {
     elevatorInputs = elevatorInputs & ~(1 << 3);
   }
-  if( (elevatorInputs & 2) == 0 && (elevatorInput & 1) == 1 ) {  //if bit 1 is high and bit 0 is low
+  if( (elevatorInputs & 2) == 0 && (elevatorInputs & 1) == 1 ) {  //if bit 1 is high and bit 0 is low
     digitalWrite( ELEVATOR_MOTOR, HIGH );
+    //Serial.println( "Starting elevator" );
   }
-  if( (elevatorInputs & 16) == 0 && (elevatorInput & 8) == 8 ) {  //if bit 4 is high and bit 3 is low
+  if( (elevatorInputs & 16) == 0 && (elevatorInputs & 8) == 8 ) {  //if bit 4 is high and bit 3 is low
     digitalWrite( ELEVATOR_MOTOR, LOW );
+    //Serial.println( "Stopping elevator" );
   }
 }
 
