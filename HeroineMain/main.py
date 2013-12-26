@@ -43,7 +43,7 @@ while(1):
     good_old = p0[st==1]
 
     # draw the tracks
-    for i,(new, old) in enumerate( zip( good_new,good_old ) ):
+    for i,(new, old) in enumerate( zip( good_new, good_old ) ):
         a,b = new.ravel()
         c,d = old.ravel()
         mask = cv2.line(mask, (a,b),(c,d), color[i].tolist(), 2)
@@ -75,7 +75,11 @@ while(1):
 ##        else:
 ##            depthMask[i] = 0
 ##    # We should have the mask now of all the pixels we can go to
-##    # 
+##    #
+##    # Analyze the tracks, finding the ones with the closest depth values
+    for i in range( 0, len( p0 ) ):
+        for j in range( i, len( p0 ) ):
+            if depth[p0[i].position] - depth[p0[j].position] < maxDepthDiff
 
     cv2.imshow( 'frame', img )
     k = cv2.waitKey( 30 ) & 0xff
