@@ -13,6 +13,13 @@ using namespace cv;
 #define DESIRED_QUALITY 0.9
 
 int main();
+int errorExit( string msg );
+
+int errorExit( string msg ) {
+    cout << msg;
+    cin.get();
+    return -1;
+}
 
 int main() {
     fstream uart1( "/dev/ttyO1" );
@@ -26,13 +33,11 @@ int main() {
     //One for the right camera, one for the left
     VideoCapture cam1( 0 );
     if( !cam1.isOpened() ) {
-        cout << "ERROR: Could not open camera 1. Exiting";
-        return -1;
+        return errorExit( "ERROR: Could not open camera 1. Exiting\n" );
     }
     VideoCapture cam2( 1 );
     if( !cam2.isOpened( ) ) {
-        cout << "ERROR: Could not open camera 2. Exiting";
-        return -1;
+        return errorExit( "ERROR: Could not open camera 2. Exiting" );
     }
     cout << "Cameras opened suffessfully\n";
 
