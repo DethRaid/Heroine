@@ -87,7 +87,7 @@ int main() {
             }
         }
                 
-        stereoCompute.compute( lFrameOld, rFrameOld, depthImg );
+        stereoCompute->compute( lFrameOld, rFrameOld, depthImg );
         //depthImg is now the depth image, with a depth of 1 being no distance
         //and a depth of 0 being all the depth
 

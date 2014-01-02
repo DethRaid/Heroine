@@ -1,14 +1,17 @@
 #include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 
-template <typename _Tp> class CV_EXPORTS ObjectPoint2f : public Point2f {
+using namespace cv;
+
+class CV_EXPORTS ObjectPoint2f : public Point2f {
     ObjectPoint2f();
-    ObjectPoint2f( _Tp _x, _Tp _y );
+    ObjectPoint2f( float _x, float _y );
     ObjectPoint2f( const ObjectPoint2f &pt );
     ObjectPoint2f( const Point2f &pt );
     ObjectPoint2f( const CvPoint &pt );
     ObjectPoint2f( const CvPoint2D32f &pt );
-    ObjectPoint2f( const Size_<_Tp> &sz );
-    ObjectPoint2f( const Vec<_Tp, 2> &v );
+    ObjectPoint2f( const Size_<float> &sz );
+    ObjectPoint2f( const Vec<float, 2> &v );
 
     ObjectPoint2f& operator=(Point2f pt);
     ObjectPoint2f& operator=(ObjectPoint2f pt);
