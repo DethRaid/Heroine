@@ -1,0 +1,2 @@
+D:/Documents/Dropbox/RIT/CSH/Heroine/HeroineMain/CMakeFiles/CMakeTmp/CMakeFiles/ALL_BUILD.dir
+D:/Documents/Dropbox/RIT/CSH/Heroine/HeroineMain/CMakeFiles/CMakeTmp/CMakeFiles/cmTryCompileExec749745161.dir
