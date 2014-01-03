@@ -1,8 +1,11 @@
 #include <iostream>
 #include <fstream>
+#include <set>
 #include <vector>
 
 #include <opencv2/opencv.hpp>
+
+#include "ObjectPoint2f.h"
 //********//********//********//********//********//********//********//********
 using namespace std;
 using namespace cv;
@@ -44,6 +47,8 @@ int main() {
     Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew, depthImg;
     vector<Point2f> pointsOld, pointsNew, goodPointsOld, goodPointsNew;
     vector<Point2f> directions;
+    vector<ObjectPoint2f> objectPoints;
+    vector<set<int>> objects;
     vector<unsigned char> status;
     vector<float> err;
     float objDepthFuzz = 0.1f;	//sample value. Will need tuning.
@@ -80,10 +85,12 @@ int main() {
         goodPointsOld.clear();
         goodPointsNew.clear();
 
+        objectPoints.clear();
         for( int i = 0; i < status.size(); i++ ) {
             if( status[i] > DESIRED_QUALITY ) {
                 goodPointsOld.push_back( pointsOld[i] );
                 goodPointsNew.push_back( pointsNew[i] );
+                objectPoints.push_back( pointsNew[i] );
                 //so now we have a list of all the good points and their
                 //positions on this frame and the last
                 //We should keep their movement vectors so we can calculate the
@@ -99,24 +106,45 @@ int main() {
         //We have the depth, we have the points we care about. We now need to
         //find which points go with which object
         //Enter recognition of an arbitrary object!
+        
+        //if point j is within objDepthFuzz depth value of point i, 
+        //then point j is in the same object as point i. Each point 
+        //needs to know which object it's in. Of course, this point 
+        //concatenation only needs to happen when finding the points 
+        //for the first time.
+        //So, like, every ten frames maybe?
 
-        for( int i = 0; i < goodPointsNew.size( ); i++ ) {
-            for( int j = i; j < goodPointsNew.size( ); j++ ) {
-                //if point j is within objDepthFuzz depth value of point i, 
-                //then point j is in the same object as point i. Each point 
-                //needs to know which object it's in. Of course, this point 
-                //concatenation only needs to happen when finding the points 
-                //for the first time.
-                //So, like, every ten frames maybe?
-                float depthDiff = depthImg.at<short>( goodPointsNew[i].x,
-                        goodPointsNew[i].y ) - 
-                    depthImg.at<short>( goodPointsNew[j].x,
-                        goodPointsNew[j].y );
-                if( abs( depthDiff ) < objDepthFuzz ) {
-                    //These two points are in the same object. 
+        int curObj = 0;
+
+        objectPoints[0].obj = curObj;
+        ObjectPoint2f *pointI, *pointJ;
+        vector<ObjectPoint2f>::iterator begin = objectPoints.begin();
+        for( int i = 0; i < objectPoints.size( ); i++ ) {
+            pointI = &objectPoints[i];
+            //has this point been added to any objects yet?
+            if( pointI->obj != -1 ) {
+                //if so, we can see if anything else needs to be added to this
+                //object
+                for( int j = i + 1; j < objectPoints.size(); j++ ) {
+                    pointJ = &objectPoints[j];
+                    float depthDiff = depthImg.at<short>( pointI->x, pointI->y ) -
+                        depthImg.at<short>( pointJ->x, pointJ->y );
+                    if( abs( depthDiff ) < objDepthFuzz ) {
+                        pointJ->obj = pointI->obj;
+                        //if this throws an error, the algorithm is wrong
+                        objects[pointI->obj].insert( j );
+                    }
                 }
+            } else {
+                //if not, create a new object with this point in it
+                objects.push_back( set<int>() );
+                objects[curObj].emplace( i );
+                curObj++;
             }
         }
+
+        //at this point we know which direction vectors belong where
+        //We can now go about 
 
         imshow( "Output", depthImg );
 

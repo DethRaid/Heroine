@@ -4,6 +4,7 @@
 using namespace cv;
 
 class CV_EXPORTS ObjectPoint2f : public Point2f {
+public:
     ObjectPoint2f();
     ObjectPoint2f( float _x, float _y );
     ObjectPoint2f( const ObjectPoint2f &pt );
