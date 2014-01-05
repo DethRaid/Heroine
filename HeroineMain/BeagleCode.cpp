@@ -68,6 +68,7 @@ int main() {
 
     cam1 >> rFrameOld;
     cvtColor( rFrameOld, rFrameOld, COLOR_BGR2GRAY );
+    //This function creates no previous points. Will fix after dinner.
     goodFeaturesToTrack( rFrameOld, pointsOld, NUM_POINTS, QUALITY_LEVEL, 
         MIN_DISTANCE );
     
