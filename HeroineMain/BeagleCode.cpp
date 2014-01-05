@@ -1,6 +1,6 @@
 #include <iostream>
+#include <forward_list>
 #include <fstream>
-#include <set>
 #include <vector>
 
 #include <opencv2/opencv.hpp>
@@ -17,6 +17,8 @@ using namespace cv;
 
 int main();
 int errorExit( string msg );
+Point2f normalize( Point2f &p );
+float magnitude( Point2f &p );
 
 int errorExit( string msg ) {
     cout << msg;
@@ -48,7 +50,7 @@ int main() {
     vector<Point2f> pointsOld, pointsNew, goodPointsOld, goodPointsNew;
     vector<Point2f> directions;
     vector<ObjectPoint2f> objectPoints;
-    vector<set<int>> objects;
+    vector<vector<int>> objects;
     vector<unsigned char> status;
     vector<float> err;
     float objDepthFuzz = 0.1f;	//sample value. Will need tuning.
@@ -107,11 +109,10 @@ int main() {
         //find which points go with which object
         //Enter recognition of an arbitrary object!
         
-        //if point j is within objDepthFuzz depth value of point i, 
-        //then point j is in the same object as point i. Each point 
-        //needs to know which object it's in. Of course, this point 
-        //concatenation only needs to happen when finding the points 
-        //for the first time.
+        //if point j is within objDepthFuzz depth value of point i, then point 
+        //j is in the same object as point i. Each point needs to know which 
+        //object it's in. Of course, this point concatenation only needs to 
+        //happen when finding the points for the first time.
         //So, like, every ten frames maybe?
 
         int curObj = 0;
@@ -132,19 +133,67 @@ int main() {
                     if( abs( depthDiff ) < objDepthFuzz ) {
                         pointJ->obj = pointI->obj;
                         //if this throws an error, the algorithm is wrong
-                        objects[pointI->obj].insert( j );
+                        objects[pointI->obj].push_back( j );
                     }
                 }
             } else {
                 //if not, create a new object with this point in it
-                objects.push_back( set<int>() );
-                objects[curObj].emplace( i );
+                objects.push_back( vector<int>() );
+                objects[curObj].push_back( i );
                 curObj++;
             }
         }
 
         //at this point we know which direction vectors belong where
-        //We can now go about 
+        //We can now go about correcting for the camera's rotation, finding the
+        //average of each object's vectors, which can be assumed to be the
+        //movement of that object. Not sure how we're going to figure out which
+        //object is the background (not sure if we need to). We can take each
+        //object's movement, project it to next frame, and then go where the
+        //object won't be.
+
+        //The number of radians the camera rotated last frame. We need to
+        //measure this somehow
+        float theta = 0.5;
+
+        //for each point:
+        //  subtract p.normalized * sin( theta )
+        for( Point2f &p : directions ) {
+            Point2f norm = normalize( p );
+            float mag = sin( theta );
+            norm.x *= mag;
+            norm.y *= mag;
+            //Not so normalized now, IS IT??!?!?!??!??!?
+            p.x -= norm.x;
+            p.y -= norm.y;
+        }
+
+        //So all the directions should now be corrected for rotation. We can
+        //now calculate the average movement of each object
+
+        Point2f *objdirs = new Point2f[objects.size()];
+        Point2f avg( 0, 0 );
+        for( int i = 0; i < objects.size(); i++ ) {
+            for( int j : objects[i] ) {
+                avg.x += directions[j].x;
+                avg.y += directions[j].y;
+            }
+            objdirs[i].x = avg.x / objects[i].size();
+            objdirs[i].y = avg.y / objects[i].size();
+            avg.x = avg.y = 0;
+        }
+
+        //predict where each track will be next frame
+
+
+
+        //draw lines connecting the tracks in a given object
+        for( int i = 0; i < objects.size(); i++ ) {
+            for( int j = 0; j < objects[i].size() - 1; j++ ) {
+                line( depthImg, objectPoints[objects[i][j]], 
+                    objectPoints[objects[i][j + 1]], Scalar( 0, 0, 1 ) );
+            }
+        }
 
         imshow( "Output", depthImg );
 
@@ -153,4 +202,13 @@ int main() {
         }
     }
     return 0;
+}
+
+Point2f normalize( Point2f &p ) {
+    float mag = magnitude( p );
+    return Point2f( p.x / mag, p.y / mag );
+}
+
+float magnitude( Point2f &p ) {
+    return sqrtf( (p.x * p.x) + (p.y * p.y) );
 }
