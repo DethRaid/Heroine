@@ -21,6 +21,13 @@ public:
     
     All objects are in an array, so they all have indexes*/
     int obj;
+
+    /*!\brief Should this point be tracked or not?
+    
+    If TRUE, this point is submitted to the tracking algorithm for fiinding in 
+    the next frame. If it is false, we use this tracks's history and the 
+    object's history to predict where it will be next frame.*/
+    bool shouldTrack;
 private:
     void swap( ObjectPoint2f &pt1, ObjectPoint2f &pt2 );
     void swap( ObjectPoint2f &pt1, Point2f &pt2 );

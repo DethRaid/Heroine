@@ -7,6 +7,9 @@
 
 #include "ObjectPoint2f.h"
 //********//********//********//********//********//********//********//********
+
+//Coded with OpenCV 3.0.0
+
 using namespace std;
 using namespace cv;
 
@@ -16,9 +19,15 @@ using namespace cv;
 #define DESIRED_QUALITY 0.9
 
 int main();
+void findCorrespondingPoints( Mat imgR, Mat imgL, vector<Point2f> ptsR, 
+    vector<Point2f> ptsL );
 int errorExit( string msg );
 Point2f normalize( Point2f &p );
 float magnitude( Point2f &p );
+void loadCameraMatrices();
+
+//The camera matrixes for distortion and whatnot
+Mat lCamMat, rCamMat, rDistCoeff, lDistCoeff;
 
 int errorExit( string msg ) {
     cout << msg;
@@ -47,16 +56,16 @@ int main() {
     cout << "Cameras opened suffessfully\n";
 
     Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew, depthImg;
-    vector<Point2f> pointsOld, pointsNew, goodPointsOld, goodPointsNew;
-    vector<Point2f> directions;
+    vector<Point2f> rPointsOld, rPointsNew, lPoints;
+    vector<Point2f> goodPointsOld, goodPointsNew, directions;
     vector<ObjectPoint2f> objectPoints;
     vector<vector<int>> objects;
     vector<unsigned char> status;
     vector<float> err;
     float objDepthFuzz = 0.1f;	//sample value. Will need tuning.
 
-    pointsOld.reserve( NUM_POINTS );
-    pointsNew.reserve( NUM_POINTS );
+    rPointsOld.reserve( NUM_POINTS );
+    rPointsNew.reserve( NUM_POINTS );
     status.reserve( NUM_POINTS );
     err.reserve( NUM_POINTS );
 
@@ -68,10 +77,15 @@ int main() {
 
     cam1 >> rFrameOld;
     cvtColor( rFrameOld, rFrameOld, COLOR_BGR2GRAY );
+    undistort( rFrameOld, rFrameOld, rCamMat, rDistCoeff );
     //This function creates no previous points. Will fix after dinner.
-    goodFeaturesToTrack( rFrameOld, pointsOld, NUM_POINTS, QUALITY_LEVEL, 
+    //Not sure which dinner
+    goodFeaturesToTrack( rFrameOld, rPointsOld, NUM_POINTS, QUALITY_LEVEL, 
         MIN_DISTANCE );
     
+    //Find the corresponding points in the other frame
+    findCorrespondingPoints( rFrameOld, rFrameNew, rPointsOld, lPoints );
+
     while( true ) {
         //swap frames one and two, for purposes of object tracking
         rFrameNew = rFrameOld.clone();
@@ -82,7 +96,7 @@ int main() {
         cvtColor( rFrameOld, rFrameOld, COLOR_BGR2GRAY );
         cvtColor( lFrameOld, lFrameOld, COLOR_BGR2GRAY );
 
-        calcOpticalFlowPyrLK( rFrameNew, rFrameOld, pointsNew, pointsOld, 
+        calcOpticalFlowPyrLK( rFrameNew, rFrameOld, rPointsNew, rPointsOld,
             status, err );
 
         goodPointsOld.clear();
@@ -91,9 +105,9 @@ int main() {
         objectPoints.clear();
         for( int i = 0; i < status.size(); i++ ) {
             if( status[i] > DESIRED_QUALITY ) {
-                goodPointsOld.push_back( pointsOld[i] );
-                goodPointsNew.push_back( pointsNew[i] );
-                objectPoints.push_back( pointsNew[i] );
+                goodPointsOld.push_back( rPointsOld[i] );
+                goodPointsNew.push_back( rPointsNew[i] );
+                objectPoints.push_back( rPointsNew[i] );
                 //so now we have a list of all the good points and their
                 //positions on this frame and the last
                 //We should keep their movement vectors so we can calculate the
@@ -212,4 +226,9 @@ Point2f normalize( Point2f &p ) {
 
 float magnitude( Point2f &p ) {
     return sqrtf( (p.x * p.x) + (p.y * p.y) );
+}
+
+void findCorrespondingPoints( Mat imgR, Mat imgL, vector<Point2f> ptsR,
+    vector<Point2f> ptsL ) {
+
 }
