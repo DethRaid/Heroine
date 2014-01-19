@@ -1,3 +1,5 @@
+#include <ctime>
+
 #include <iostream>
 #include <forward_list>
 #include <fstream>
@@ -14,7 +16,7 @@ using namespace std;
 using namespace cv;
 
 #define NUM_POINTS 150
-#define QUALITY_LEVEL 1.0
+#define QUALITY_LEVEL 0.01
 #define MIN_DISTANCE 20.0
 #define DESIRED_QUALITY 0.9
 
@@ -39,7 +41,7 @@ int main() {
     fstream uart1( "/dev/ttyO1" );
     if( !uart1.is_open() ) {
         cout << "ERROR: Could not open serial stream. No communication will be"
-             << " available\n";
+            << " available\n";
     } else {
         cout << "Serial stream opened successfully\n";
     }
@@ -50,19 +52,28 @@ int main() {
         return errorExit( "ERROR: Could not open camera 1. Exiting\n" );
     }
     VideoCapture cam2( 1 );
-    if( !cam2.isOpened( ) ) {
+    if( !cam2.isOpened() ) {
         return errorExit( "ERROR: Could not open camera 2. Exiting" );
     }
     cout << "Cameras opened suffessfully\n";
 
     Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew, depthImg;
+    vector<int> depths;
     vector<Point2f> rPointsOld, rPointsNew, lPoints;
     vector<Point2f> goodPointsOld, goodPointsNew, directions;
     vector<ObjectPoint2f> objectPoints;
+    vector<Point3f> worldPoints;
     vector<vector<int>> objects;
     vector<unsigned char> status;
+    int colors[255];
     vector<float> err;
     float objDepthFuzz = 0.1f;	//sample value. Will need tuning.
+
+    srand( time( NULL ) );
+
+    for( int i = 0; i < 255; i++ ) {
+        colors[i] = rand() % 255;
+    }
 
     rPointsOld.reserve( NUM_POINTS );
     rPointsNew.reserve( NUM_POINTS );
@@ -77,14 +88,49 @@ int main() {
 
     cam1 >> rFrameOld;
     cvtColor( rFrameOld, rFrameOld, COLOR_BGR2GRAY );
-    undistort( rFrameOld, rFrameOld, rCamMat, rDistCoeff );
+
+    cam2 >> lFrameOld;
+    cvtColor( lFrameOld, lFrameOld, COLOR_BGR2GRAY );
+    //undistort( rFrameOld, rFrameOld, rCamMat, rDistCoeff );
     //This function creates no previous points. Will fix after dinner.
     //Not sure which dinner
-    goodFeaturesToTrack( rFrameOld, rPointsOld, NUM_POINTS, QUALITY_LEVEL, 
+    goodFeaturesToTrack( rFrameOld, rPointsOld, NUM_POINTS, QUALITY_LEVEL,
         MIN_DISTANCE );
-    
+
     //Find the corresponding points in the other frame
-    findCorrespondingPoints( rFrameOld, rFrameNew, rPointsOld, lPoints );
+    calcOpticalFlowPyrLK( rFrameOld, lFrameOld, rPointsOld, lPoints,
+        status, err );
+
+    if( rPointsOld.size() != lPoints.size() ) {
+        cout << "Error: Could not find all requested points. Attempting to "
+            << "continue anyway. Expect a bad time\n";
+    }
+
+
+    for( int i = 0; i < lPoints.size(); i++ ) {
+        circle( lFrameOld, lPoints[i], 10, colors[i] );
+        circle( rFrameOld, rPointsOld[i], 10, colors[i] );
+        //disparity = x - x' = Bf/Z
+        //Z(x - x') = Bf
+        //Z = Bf/(x - x')
+        //B = 6.35 cm (about distance between human eyes)
+        //   B = distance between cameras
+        //f = 700 (units of some sort? OpenCV claims this is in pixels)
+        //  Possibly this is in sensor pixels? Odd unit
+        //  f = focal length of camera (it should be the same for both)
+        //Bf = 4445
+        //  It's just math
+        depths.push_back( 4445 / (lPoints[i].x - rPointsOld[i].x) );
+
+        //We now have the points we can track on both images. Time to whip out 
+        //our robes and wizard hats!
+
+        //Divide everything by z so that a point farther away will be closer to
+        //the origin for a given (u, v)
+        worldPoints.push_back( Point3f( lPoints[i].x / depths[i],
+            lPoints[i].y / depths[i],
+            depths[i] ) );
+    }
 
     while( true ) {
         //swap frames one and two, for purposes of object tracking
@@ -96,7 +142,7 @@ int main() {
         cvtColor( rFrameOld, rFrameOld, COLOR_BGR2GRAY );
         cvtColor( lFrameOld, lFrameOld, COLOR_BGR2GRAY );
 
-        calcOpticalFlowPyrLK( rFrameNew, rFrameOld, rPointsNew, rPointsOld,
+        calcOpticalFlowPyrLK( rFrameOld, rFrameNew, rPointsOld, rPointsNew,
             status, err );
 
         goodPointsOld.clear();
@@ -115,7 +161,7 @@ int main() {
                 directions.push_back( goodPointsNew[i] - goodPointsOld[i] );
             }
         }
-                
+
         stereoCompute->compute( lFrameOld, rFrameOld, depthImg );
         //depthImg is now the depth image, with a depth of 1 being no distance
         //and a depth of 0 being all the depth
@@ -123,7 +169,7 @@ int main() {
         //We have the depth, we have the points we care about. We now need to
         //find which points go with which object
         //Enter recognition of an arbitrary object!
-        
+
         //if point j is within objDepthFuzz depth value of point i, then point 
         //j is in the same object as point i. Each point needs to know which 
         //object it's in. Of course, this point concatenation only needs to 
@@ -135,7 +181,7 @@ int main() {
         objectPoints[0].obj = curObj;
         ObjectPoint2f *pointI, *pointJ;
         vector<ObjectPoint2f>::iterator begin = objectPoints.begin();
-        for( int i = 0; i < objectPoints.size( ); i++ ) {
+        for( int i = 0; i < objectPoints.size(); i++ ) {
             pointI = &objectPoints[i];
             //has this point been added to any objects yet?
             if( pointI->obj != -1 ) {
@@ -205,7 +251,7 @@ int main() {
         //draw lines connecting the tracks in a given object
         for( int i = 0; i < objects.size(); i++ ) {
             for( int j = 0; j < objects[i].size() - 1; j++ ) {
-                line( depthImg, objectPoints[objects[i][j]], 
+                line( depthImg, objectPoints[objects[i][j]],
                     objectPoints[objects[i][j + 1]], Scalar( 0, 0, 1 ) );
             }
         }
