@@ -1,63 +1,64 @@
-#include "ObjectPoint2f.h"
+#include "ObjectPoint3f.h"
 
-ObjectPoint2f::ObjectPoint2f() : Point2f() {
+ObjectPoint3f::ObjectPoint3f() : Point2f() {
     x = y = 0;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( float _x, float _y ) {
+ObjectPoint3f::ObjectPoint3f( float _x, float _y, float _z ) {
     x = _x;
     y = _y;
+    z = _z;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const ObjectPoint2f &pt ) : ObjectPoint2f( ) {
+ObjectPoint3f::ObjectPoint3f( const ObjectPoint3f &pt ) : ObjectPoint3f( ) {
     x = pt.x;
     y = pt.y;
     obj = pt.obj;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Point2f &pt ) {
+ObjectPoint3f::ObjectPoint3f( const Point2f &pt ) {
     x = pt.x;
     y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const CvPoint &pt ) {
+ObjectPoint3f::ObjectPoint3f( const CvPoint &pt ) {
     x = pt.x;
     y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const CvPoint2D32f &pt ) {
+ObjectPoint3f::ObjectPoint3f( const CvPoint2D32f &pt ) {
     x = pt.x;
     y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Size_<float> &sz ) {
+ObjectPoint3f::ObjectPoint3f( const Size_<float> &sz ) {
     x = sz.width;
     y = sz.height;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Vec<float, 2> &v ) {
+ObjectPoint3f::ObjectPoint3f( const Vec<float, 2> &v ) {
     x = v[0];
     y = v[1];
     obj = -1;
 }
 
-ObjectPoint2f& ObjectPoint2f::operator=(ObjectPoint2f pt) {
+ObjectPoint3f& ObjectPoint3f::operator=(ObjectPoint3f pt) {
     swap( *this, pt );
     return *this;
 }
 
-ObjectPoint2f& ObjectPoint2f::operator=(Point2f pt) {
+ObjectPoint3f& ObjectPoint3f::operator=(Point2f pt) {
     swap( *this, pt );
     return *this;
 }
 
-void ObjectPoint2f::swap( ObjectPoint2f &pt1, ObjectPoint2f &pt2 ) {
+void ObjectPoint3f::swap( ObjectPoint3f &pt1, ObjectPoint3f &pt2 ) {
     float temp = pt2.x;
     pt2.x = pt1.x;
     pt1.x = temp;
@@ -71,7 +72,7 @@ void ObjectPoint2f::swap( ObjectPoint2f &pt1, ObjectPoint2f &pt2 ) {
     pt1.obj = temp;
 }
 
-void ObjectPoint2f::swap( ObjectPoint2f &pt1, Point2f &pt2 ) {
+void ObjectPoint3f::swap( ObjectPoint3f &pt1, Point2f &pt2 ) {
     float temp = pt2.x;
     pt2.x = pt1.x;
     pt1.x = temp;

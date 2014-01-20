@@ -7,7 +7,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "ObjectPoint2f.h"
+#include "ObjectPoint3f.h"
 //********//********//********//********//********//********//********//********
 
 //Coded with OpenCV 3.0.0
@@ -34,7 +34,7 @@ Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew;
 vector<int> depths;
 vector<Point2f> rPointsOld, rPointsNew, lPoints;
 vector<Point2f> goodPointsOld, goodPointsNew, directions;
-vector<ObjectPoint2f> objectPoints;
+vector<ObjectPoint3f> objectPoints;
 vector<Point3f> worldPoints;
 vector<vector<int>> objects;
 vector<unsigned char> status;
@@ -79,8 +79,6 @@ int main() {
     rPointsNew.reserve( NUM_POINTS );
     status.reserve( NUM_POINTS );
     err.reserve( NUM_POINTS );
-
-    StereoBM *stereoCompute = createStereoBM( 0, 13 );
 
     namedWindow( "Camera1", 1 );
     namedWindow( "Camera2", 2 );
@@ -189,7 +187,7 @@ int main() {
         calcOpticalFlowPyrLK( rFrameOld, rFrameNew, rPointsOld, rPointsNew,
             status, err );
 
-        goodPointsOld.clear();
+        goodPointsOld = goodPointsNew;
         goodPointsNew.clear();
 
         objectPoints.clear();
@@ -229,8 +227,8 @@ int main() {
 
         int curObj = 0;
 
-        ObjectPoint2f *pointI, *pointJ;
-        vector<ObjectPoint2f>::iterator begin = objectPoints.begin();
+        ObjectPoint3f *pointI, *pointJ;
+        vector<ObjectPoint3f>::iterator begin = objectPoints.begin();
         for( int i = 0; i < objectPoints.size(); i++ ) {
             pointI = &objectPoints[i];
             //has this point been added to any objects yet?
@@ -291,10 +289,12 @@ int main() {
 
         Point2f *objdirs = new Point2f[objects.size()];
         Point2f avg( 0, 0 );
+        float avgDepth = 0;
         for( int i = 0; i < objects.size(); i++ ) {
             for( int j : objects[i] ) {
                 avg.x += directions[j].x;
                 avg.y += directions[j].y;
+                avgDepth += depths[i];
             }
             objdirs[i].x = avg.x / objects[i].size();
             objdirs[i].y = avg.y / objects[i].size();

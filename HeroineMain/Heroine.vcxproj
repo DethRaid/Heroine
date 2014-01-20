@@ -11,11 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ObjectPoint2f.h" />
+    <ClInclude Include="ObjectPoint3f.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BeagleCode.cpp" />
-    <ClCompile Include="ObjectPoint2f.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="ObjectPoint3f.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9606853C-678C-44B1-A046-35A442B78569}</ProjectGuid>
