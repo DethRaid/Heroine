@@ -5,9 +5,10 @@ ObjectPoint2f::ObjectPoint2f() : Point2f() {
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( float _x, float _y ) : ObjectPoint2f() {
+ObjectPoint2f::ObjectPoint2f( float _x, float _y ) {
     x = _x;
     y = _y;
+    obj = -1;
 }
 
 ObjectPoint2f::ObjectPoint2f( const ObjectPoint2f &pt ) : ObjectPoint2f( ) {
@@ -16,23 +17,33 @@ ObjectPoint2f::ObjectPoint2f( const ObjectPoint2f &pt ) : ObjectPoint2f( ) {
     obj = pt.obj;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Point2f &pt ) : Point2f( pt ) {
+ObjectPoint2f::ObjectPoint2f( const Point2f &pt ) {
+    x = pt.x;
+    y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const CvPoint &pt ) : Point2f( pt ) {
+ObjectPoint2f::ObjectPoint2f( const CvPoint &pt ) {
+    x = pt.x;
+    y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const CvPoint2D32f &pt ) : Point2f( pt ) {
+ObjectPoint2f::ObjectPoint2f( const CvPoint2D32f &pt ) {
+    x = pt.x;
+    y = pt.y;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Size_<float> &sz ) : Point2f( sz ) {
+ObjectPoint2f::ObjectPoint2f( const Size_<float> &sz ) {
+    x = sz.width;
+    y = sz.height;
     obj = -1;
 }
 
-ObjectPoint2f::ObjectPoint2f( const Vec<float, 2> &v ) : Point2f( v ) {
+ObjectPoint2f::ObjectPoint2f( const Vec<float, 2> &v ) {
+    x = v[0];
+    y = v[1];
     obj = -1;
 }
 
