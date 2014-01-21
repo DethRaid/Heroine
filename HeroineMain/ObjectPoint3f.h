@@ -3,26 +3,22 @@
 
 using namespace cv;
 
-class CV_EXPORTS ObjectPoint3f : public Point2f {
+class CV_EXPORTS ObjectPoint3f : public Point3f {
 public:
     ObjectPoint3f();
     ObjectPoint3f( float _x, float _y, float _z );
     ObjectPoint3f( const ObjectPoint3f &pt );
-    ObjectPoint3f( const Point2f &pt );
-    ObjectPoint3f( const CvPoint &pt );
-    ObjectPoint3f( const CvPoint2D32f &pt );
-    ObjectPoint3f( const Size_<float> &sz );
-    ObjectPoint3f( const Vec<float, 2> &v );
 
-    ObjectPoint3f& operator=(Point2f pt);
+    ObjectPoint3f& operator=(Point3f pt);
     ObjectPoint3f& operator=(ObjectPoint3f pt);
+
+    ObjectPoint3f& operator-=(Point3f &rhs);
+    ObjectPoint3f& operator/=(float f);
 
     /*!\brief The index of the object this point belongs to.
     
     All objects are in an array, so they all have indexes*/
     int obj;
-
-    float z;
 
     /*!\brief Should this point be tracked or not?
     
@@ -32,5 +28,7 @@ public:
     bool shouldTrack;
 private:
     void swap( ObjectPoint3f &pt1, ObjectPoint3f &pt2 );
-    void swap( ObjectPoint3f &pt1, Point2f &pt2 );
+    void swap( ObjectPoint3f &pt1, Point3f &pt2 );
 };
+
+ObjectPoint3f operator/(ObjectPoint3f lhs, float f);

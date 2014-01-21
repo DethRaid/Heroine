@@ -1,3 +1,6 @@
+#include <cmath>
+#include <ctime>
+
 #include <fstream>
 
 #include <forward_list>
@@ -9,6 +12,10 @@
 using namespace std;
 using namespace cv;
 
+/* Do some research to determine the appropriate value, Try to measure in 
+   bananas */
+#define ROBO_SPEED 20
+
 /* Variables */
 fstream uart1;
 
@@ -16,9 +23,9 @@ VideoCapture rCam, lCam;
 Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew;
 vector<unsigned char> status;
 vector<float> err;
-vector<ObjectPoint3f> worldPoints;
-vector<Point2f> rPoints, lPointsOld, lPointsNew, directions;
-vector<Point2f> ssObjMovement;
+vector<ObjectPoint3f> worldPointsOld, worldPointsNew;
+vector<Point2f> rPoints, lPointsOld, lPointsNew;
+vector<Point3f> objMovement, pointDirections;
 vector<ObjectPoint3f> avgObjPos;
 vector<forward_list<int>> objects;
 
@@ -31,6 +38,7 @@ void calculateWorldPoints();
 void findObjects();
 void calcAvgPosAndDir();
 void display();
+Point3f &predictClosestObjPos();
 
 int main() {
     /* Open video streams */
@@ -57,7 +65,11 @@ int main() {
 
     goodFeaturesToTrack( lFrameNew, lPointsNew, 500, 0.01, 10 );
 
+    time_t startTime;
+
     while( waitKey( 30 ) < 0 ) {
+        /* Idea: Fixed frames, because we probably can */
+        startTime = time( NULL );
         getNextImages();
 
         lPointsOld = lPointsNew;
@@ -80,6 +92,17 @@ int main() {
         findObjects();
         calcAvgPosAndDir();
 
+        Point3f predPos = predictClosestObjPos( );
+        //we ARE the origin!
+        if( abs( predPos.x ) < 50 ) {
+            //The object will be within hitting distance (potentially)
+            //Move to the right or left to avoid it.
+            addSerialMessage( predPos.x < 0 ? 'r' : 'l', 200 );
+        }
+
+        //Wait so that we only run at 5 FPS
+        _sleep( max( int(200 - (time( NULL ) - startTime)), 0 ) );
+
         display();
     }
 
@@ -99,9 +122,9 @@ void getNextImages() {
 
 /* Find out where the feature films moved to */
 void findFeatureMovement() {
-    directions.clear( ); 
-    for( int i = 0; i < lPointsNew.size(); i++ ) {
-        directions.push_back( lPointsNew[i] - lPointsOld[i] );
+    pointDirections.clear( );
+    for( int i = 0; i < worldPointsNew.size(); i++ ) {
+        pointDirections.push_back( worldPointsNew[i] - worldPointsOld[i] );
     }
 }
 
@@ -112,7 +135,8 @@ void findStereoPoints() {
 
 void calculateWorldPoints() {
     float depth;
-    worldPoints.clear();
+    worldPointsOld = worldPointsNew;    //Hopefully this is a copy-by-value op
+    worldPointsNew.clear();
     for( int i = 0; i < rPoints.size(); i++ ) {
         //Z = Bf/(x - x')
         //B = 6.35 cm (about distance between human eyes)
@@ -129,7 +153,7 @@ void calculateWorldPoints() {
 
         //Divide everything by z so that a point farther away will be closer to
         //the origin for a given (u, v)
-        worldPoints.push_back( ObjectPoint3f( lPointsNew[i].x / depth,
+        worldPointsNew.push_back( ObjectPoint3f( lPointsNew[i].x / depth,
             lPointsNew[i].y / depth, depth ) );
     }
 }
@@ -137,8 +161,8 @@ void calculateWorldPoints() {
 void findObjects( ) {
     int curObj = 0;
     ObjectPoint3f *pointI, *pointJ;
-    for( int i = 0; i < worldPoints.size( ); i++ ) {
-        pointI = &worldPoints[i];
+    for( int i = 0; i < worldPointsNew.size( ); i++ ) {
+        pointI = &worldPointsNew[i];
         //has this point been added to any objects yet?
         if( pointI->obj == -1 ) {
             //if not, create a new object with this point in it
@@ -149,8 +173,8 @@ void findObjects( ) {
         }
         //if so, we can see if anything else needs to be added to this
         //object
-        for( int j = i + 1; j < worldPoints.size( ); j++ ) {
-            pointJ = &worldPoints[j];
+        for( int j = i + 1; j < worldPointsNew.size( ); j++ ) {
+            pointJ = &worldPointsNew[j];
             float depthDiff = pointI->z - pointJ->z;
             if( abs( depthDiff ) < 40 ) {
                 pointJ->obj = pointI->obj;
@@ -162,24 +186,40 @@ void findObjects( ) {
 }
 
 void calcAvgPosAndDir() {
-    ssObjMovement.clear();
+    objMovement.clear();
     avgObjPos.clear();
 
-    ssObjMovement.reserve( objects.size() );
+    objMovement.reserve( objects.size() );
     avgObjPos.reserve( objects.size() );
 
     float count = 0;
     ObjectPoint3f pos;
-    Point2f dir;
+    Point3f dir;
     for( int i = 0; i < objects.size(); i++ ) { //for each object
         for( int j : objects[i] ) {  //for each point in the object
-            pos += worldPoints[j];
-            dir += directions[j];
+            pos += worldPointsNew[j];
+            dir += pointDirections[j];
             count += 1;
         }
-        ssObjMovement.push_back( Point2f( dir.x / count, dir.y / count ) );
-        avgObjPos.push_back(  )
+        objMovement.push_back( Point3f( dir.x / count, dir.y / count,
+            dir.z / count ) );
+        avgObjPos.push_back( pos / count );
     }
+}
+
+Point3f &predictClosestObjPos() {
+    int closestPos = 0;
+    for( int i = 0; i < avgObjPos.size(); i++ ) {
+        if( avgObjPos[i].z < avgObjPos[closestPos].z ) {
+            closestPos = i;
+        }
+    }
+    /* v = d/t
+    tv = d
+    t = d/v
+    */
+    float timeToClose = avgObjPos[closestPos].z / ROBO_SPEED;
+    return objMovement[closestPos] * timeToClose;
 }
 
 void display() {
