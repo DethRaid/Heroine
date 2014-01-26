@@ -56,6 +56,7 @@ void findObjects();
 void calcAvgPosAndDir();
 void display();
 void addSerialMessage( char msg );
+float sqrMag( Point3f dist );
 Point3f &predictClosestObjPos();
 
 int main() {
@@ -80,27 +81,28 @@ int main() {
     namedWindow( "Left", 1 );
     namedWindow( "Right", 2 );
 
-    getNextImages();
-
     time_t startTime = time( NULL );
 
-    while( waitKey( max( int( 200 - (time( NULL ) - startTime) ), 2 ) ) < 0 ) {
-        /* Idea: Fixed frames, because we probably can */
+    /* Run this code every second */
+    while( waitKey( max( int( 1000 - (time( NULL ) - startTime) ), 2 ) ) < 0 ) {
         startTime = time( NULL );
         getNextImages();
 
-        /* Re-calculate the points every five frames (every second) to account
-         * for objects entering ans exiting the visible area
-         */
-        if( frameCount % 5 == 0 ) {
-            goodFeaturesToTrack( lFrameNew, lPoints, 500, 0.01, 10 );
-        }
+        goodFeaturesToTrack( lFrameNew, lPoints, 250, 0.01, 10 );
 
         findStereoPoints( );
         calculateWorldPoints();
-        if( frameCount % 5 == 0 ) {
-            worldPointsOld = worldPointsNew;
-        }
+
+        //About 24 fps
+        waitKey( 42 );
+
+        getNextImages();
+
+        calcOpticalFlowPyrLK( lFrameOld, lFrameNew, lPoints, lPoints,
+            status, err );
+
+        findStereoPoints();
+        calculateWorldPoints( );
         findFeatureMovement();
 
         //So we now have the points in their world position, as well as last
@@ -124,8 +126,13 @@ int main() {
             addSerialMessage( predPos.x < 0 ? 'r' : 'l' );
         }
 
-        //Wait so that we only run at 5 FPS
-        //_sleep( max( int(200 - (time( NULL ) - startTime)), 0 ) );
+        for( int i = 0; i < lPoints.size(); i++ ) {
+            circle( lFrameNew, lPoints[i], 5, Scalar( 1, 0, 0 ) );
+        }
+
+        for( int i = 0; i < rPoints.size( ); i++ ) {
+            circle( rFrameNew, rPoints[i], 5, Scalar( 1, 0, 0 ) );
+        }
 
         display( ); 
         frameCount++;
@@ -201,7 +208,8 @@ void findObjects( ) {
         for( int j = i + 1; j < worldPointsNew.size( ); j++ ) {
             pointJ = &worldPointsNew[j];
             float depthDiff = pointI->z - pointJ->z;
-            if( abs( depthDiff ) < 40 ) {
+            Point3f dist = pointJ - pointI;
+            if( abs( depthDiff ) < 20 && sqrMag( dist ) < 36 ) {
                 pointJ->obj = pointI->obj;
                 //if this throws an error, the algorithm is wrong
                 objects[pointI->obj].emplace_front( j );
@@ -257,4 +265,8 @@ void addSerialMessage( char msg ) {
 void display() {
     imshow( "Right", rFrameNew );
     imshow( "Left", lFrameNew );
+}
+
+float sqrMag( Point3f dist ) {
+    return dist.x * dist.x + dist.y * dist.y + dist.z + dist.z;
 }
