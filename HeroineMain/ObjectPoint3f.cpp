@@ -31,6 +31,7 @@ ObjectPoint3f& ObjectPoint3f::operator-=(Point3f &rhs) {
     x -= rhs.x;
     z -= rhs.z;
     y -= rhs.y;
+    return *this;
 }
 
 ObjectPoint3f& ObjectPoint3f::operator/=(float f) {

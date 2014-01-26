@@ -1,3 +1,4 @@
+#if 0
 #include <ctime>
 
 #include <iostream>
@@ -354,3 +355,4 @@ void findCorrespondingPoints( Mat imgR, Mat imgL, vector<Point2f> ptsR,
     vector<Point2f> ptsL ) {
 
 }
+#endif

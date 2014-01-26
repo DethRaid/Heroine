@@ -41,7 +41,7 @@ Mat rFrameOld, rFrameNew, lFrameOld, lFrameNew;
 vector<unsigned char> status;
 vector<float> err;
 vector<ObjectPoint3f> worldPointsOld, worldPointsNew;
-vector<Point2f> rPoints, lPointsOld, lPointsNew;
+vector<Point2f> rPoints, lPoints;
 vector<Point3f> objMovement, pointDirections;
 vector<ObjectPoint3f> avgObjPos;
 vector<forward_list<int>> objects;
@@ -82,10 +82,9 @@ int main() {
 
     getNextImages();
 
-    time_t startTime;
+    time_t startTime = time( NULL );
 
-    while( waitKey( 30 ) < 0 ) {
-        frameCount++;
+    while( waitKey( max( int( 200 - (time( NULL ) - startTime) ), 2 ) ) < 0 ) {
         /* Idea: Fixed frames, because we probably can */
         startTime = time( NULL );
         getNextImages();
@@ -94,15 +93,15 @@ int main() {
          * for objects entering ans exiting the visible area
          */
         if( frameCount % 5 == 0 ) {
-            goodFeaturesToTrack( lFrameNew, lPointsNew, 500, 0.01, 10 );
+            goodFeaturesToTrack( lFrameNew, lPoints, 500, 0.01, 10 );
         }
 
-        lPointsOld = lPointsNew;
-        calcOpticalFlowPyrLK( lFrameOld, lFrameNew, lPointsOld, lPointsNew,
-            status, err );
-
-        findStereoPoints();
+        findStereoPoints( );
         calculateWorldPoints();
+        if( frameCount % 5 == 0 ) {
+            worldPointsOld = worldPointsNew;
+        }
+        findFeatureMovement();
 
         //So we now have the points in their world position, as well as last
         //frame's points in screen space
@@ -126,9 +125,10 @@ int main() {
         }
 
         //Wait so that we only run at 5 FPS
-        _sleep( max( int(200 - (time( NULL ) - startTime)), 0 ) );
+        //_sleep( max( int(200 - (time( NULL ) - startTime)), 0 ) );
 
-        display();
+        display( ); 
+        frameCount++;
     }
 
     return 0;
@@ -154,7 +154,7 @@ void findFeatureMovement() {
 }
 
 void findStereoPoints() {
-    calcOpticalFlowPyrLK( lFrameNew, rFrameNew, lPointsOld, rPoints,
+    calcOpticalFlowPyrLK( lFrameNew, rFrameNew, lPoints, rPoints,
         status, err );
 }
 
@@ -171,15 +171,15 @@ void calculateWorldPoints() {
         //  f = focal length of camera (it should be the same for both)
         //Bf = 4445
         //  It's just math
-        depth = 4445 / (lPointsNew[i].x - rPoints[i].x);
+        depth = 4445 / (lPoints[i].x - rPoints[i].x);
 
         //We now have the points we can track on both images. Time to whip out 
         //our robes and wizard hats!
 
         //Divide everything by z so that a point farther away will be closer to
         //the origin for a given (u, v)
-        worldPointsNew.push_back( ObjectPoint3f( lPointsNew[i].x / depth,
-            lPointsNew[i].y / depth, depth ) );
+        worldPointsNew.push_back( ObjectPoint3f( lPoints[i].x / depth,
+            lPoints[i].y / depth, depth ) );
     }
 }
 
@@ -248,6 +248,7 @@ Point3f &predictClosestObjPos() {
 }
 
 void addSerialMessage( char msg ) {
+    cout << msg << "\n";
     if( uart1.is_open() ) {
         uart1 << msg;
     }
