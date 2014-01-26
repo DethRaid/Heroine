@@ -12,11 +12,28 @@
 using namespace std;
 using namespace cv;
 
+/* The code here will look ro significant points, group them together based on
+ * depth, find the average position and velocity of each group, predict where
+ * closest group will be by the time that the robot gets to it, then move to
+ * avoid that position. This is the collision avoidance code.
+ *
+ * However, this code will do nothing to determine where Heroine is on-floor.
+ * For that, we'll have to create a system of visual landmarks which Heroine can
+ * identify, such as putting numbers on the wall next to doors.
+ *
+ * RIT has already done this for us, with the whiteboards. They all have room
+ * numbers on them. However, I'm not sure if those numbers will be visible to
+ * Heroine.
+
+ * A second option is to use the other numbers that RIT provided, the ones on
+ * the bottom of the */
+
 /* Do some research to determine the appropriate value, Try to measure in 
    bananas */
 #define ROBO_SPEED 20
 
 /* Variables */
+char frameCount;
 fstream uart1;
 
 VideoCapture rCam, lCam;
@@ -38,9 +55,11 @@ void calculateWorldPoints();
 void findObjects();
 void calcAvgPosAndDir();
 void display();
+void addSerialMessage( char msg );
 Point3f &predictClosestObjPos();
 
 int main() {
+    frameCount = 0;
     /* Open video streams */
     rCam = VideoCapture( 0 );   //hopefully correct value
     lCam = VideoCapture( 1 );
@@ -63,14 +82,20 @@ int main() {
 
     getNextImages();
 
-    goodFeaturesToTrack( lFrameNew, lPointsNew, 500, 0.01, 10 );
-
     time_t startTime;
 
     while( waitKey( 30 ) < 0 ) {
+        frameCount++;
         /* Idea: Fixed frames, because we probably can */
         startTime = time( NULL );
         getNextImages();
+
+        /* Re-calculate the points every five frames (every second) to account
+         * for objects entering ans exiting the visible area
+         */
+        if( frameCount % 5 == 0 ) {
+            goodFeaturesToTrack( lFrameNew, lPointsNew, 500, 0.01, 10 );
+        }
 
         lPointsOld = lPointsNew;
         calcOpticalFlowPyrLK( lFrameOld, lFrameNew, lPointsOld, lPointsNew,
@@ -97,7 +122,7 @@ int main() {
         if( abs( predPos.x ) < 50 ) {
             //The object will be within hitting distance (potentially)
             //Move to the right or left to avoid it.
-            addSerialMessage( predPos.x < 0 ? 'r' : 'l', 200 );
+            addSerialMessage( predPos.x < 0 ? 'r' : 'l' );
         }
 
         //Wait so that we only run at 5 FPS
@@ -220,6 +245,12 @@ Point3f &predictClosestObjPos() {
     */
     float timeToClose = avgObjPos[closestPos].z / ROBO_SPEED;
     return objMovement[closestPos] * timeToClose;
+}
+
+void addSerialMessage( char msg ) {
+    if( uart1.is_open() ) {
+        uart1 << msg;
+    }
 }
 
 void display() {
